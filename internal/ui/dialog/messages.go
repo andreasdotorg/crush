@@ -42,3 +42,8 @@ type (
 		SessionID string
 	}
 )
+
+// CmdMsg is a message that carries a command to be executed.
+type CmdMsg struct {
+	Cmd tea.Cmd
+}

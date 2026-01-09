@@ -134,6 +134,11 @@ func (c *Commands) ID() string {
 	return CommandsID
 }
 
+// Init implements Dialog.
+func (c *Commands) Init() tea.Cmd {
+	return nil
+}
+
 // Update implements Dialog.
 func (c *Commands) Update(msg tea.Msg) tea.Msg {
 	switch msg := msg.(type) {

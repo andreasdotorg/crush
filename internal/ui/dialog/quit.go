@@ -64,6 +64,11 @@ func (*Quit) ID() string {
 	return QuitID
 }
 
+// Init implements Dialog.
+func (q *Quit) Init() tea.Cmd {
+	return nil
+}
+
 // Update implements [Model].
 func (q *Quit) Update(msg tea.Msg) tea.Msg {
 	switch msg := msg.(type) {

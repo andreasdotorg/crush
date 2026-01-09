@@ -17,6 +17,7 @@ var CloseKey = key.NewBinding(
 // Dialog is a component that can be displayed on top of the UI.
 type Dialog interface {
 	ID() string
+	Init() tea.Cmd
 	Update(msg tea.Msg) tea.Msg
 	View() string
 }
@@ -49,8 +50,9 @@ func (d *Overlay) ContainsDialog(dialogID string) bool {
 }
 
 // OpenDialog opens a new dialog to the stack.
-func (d *Overlay) OpenDialog(dialog Dialog) {
+func (d *Overlay) OpenDialog(dialog Dialog) tea.Cmd {
 	d.dialogs = append(d.dialogs, dialog)
+	return dialog.Init()
 }
 
 // CloseDialog closes the dialog with the specified ID from the stack.

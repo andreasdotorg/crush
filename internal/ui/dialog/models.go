@@ -167,6 +167,11 @@ func (m *Models) ID() string {
 	return ModelsID
 }
 
+// Init implements Dialog.
+func (m *Models) Init() tea.Cmd {
+	return nil
+}
+
 // Update implements Dialog.
 func (m *Models) Update(msg tea.Msg) tea.Msg {
 	switch msg := msg.(type) {

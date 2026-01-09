@@ -34,6 +34,7 @@ import (
 	"github.com/charmbracelet/crush/internal/ui/common"
 	"github.com/charmbracelet/crush/internal/ui/completions"
 	"github.com/charmbracelet/crush/internal/ui/dialog"
+	timage "github.com/charmbracelet/crush/internal/ui/image"
 	"github.com/charmbracelet/crush/internal/ui/logo"
 	"github.com/charmbracelet/crush/internal/ui/styles"
 	"github.com/charmbracelet/crush/internal/uiutil"
@@ -137,6 +138,9 @@ type UI struct {
 
 	// sidebarLogo keeps a cached version of the sidebar sidebarLogo.
 	sidebarLogo string
+
+	// imageCaps stores the terminal image capabilities.
+	imageCaps timage.Capabilities
 }
 
 // New creates a new instance of the [UI] model.
@@ -217,6 +221,11 @@ func (m *UI) Init() tea.Cmd {
 	var cmds []tea.Cmd
 	if m.QueryVersion {
 		cmds = append(cmds, tea.RequestTerminalVersion)
+		// XXX: Right now, we're using the same logic to determine image
+		// support. Terminals like Apple Terminal and possibly others might
+		// bleed characters when querying for Kitty graphics via APC escape
+		// sequences.
+		cmds = append(cmds, timage.RequestCapabilities())
 	}
 	return tea.Batch(cmds...)
 }
@@ -403,6 +412,16 @@ func (m *UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Handle async file loading for completions.
 		if m.completionsOpen {
 			m.completions.SetFiles(msg.Files)
+		}
+	case uv.KittyGraphicsEvent:
+		// [timage.RequestCapabilities] sends a Kitty graphics query and this
+		// captures the response. Any response means the terminal understands
+		// the protocol.
+		m.imageCaps.SupportsKittyGraphics = true
+	default:
+		// Handle other dialog messages
+		if m.dialog.HasDialogs() {
+			_ = m.dialog.Update(msg)
 		}
 	}
 
@@ -816,6 +835,9 @@ func (m *UI) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 			modelMsg := fmt.Sprintf("%s model changed to %s", msg.ModelType, msg.Model.Model)
 			cmds = append(cmds, uiutil.ReportInfo(modelMsg))
 			m.dialog.CloseDialog(dialog.ModelsID)
+		case dialog.CmdMsg:
+			// Handle custom command
+			cmds = append(cmds, msg.Cmd)
 		}
 
 		return tea.Batch(cmds...)
@@ -854,6 +876,11 @@ func (m *UI) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 			}
 
 			switch {
+			case key.Matches(msg, m.keyMap.Editor.AddImage):
+				if cmd := m.openFilesDialog(); cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+
 			case key.Matches(msg, m.keyMap.Editor.SendMessage):
 				value := m.textarea.Value()
 				if before, ok := strings.CutSuffix(value, "\\"); ok {
@@ -1822,8 +1849,7 @@ func (m *UI) openQuitDialog() tea.Cmd {
 	}
 
 	quitDialog := dialog.NewQuit(m.com)
-	m.dialog.OpenDialog(quitDialog)
-	return nil
+	return m.dialog.OpenDialog(quitDialog)
 }
 
 // openModelsDialog opens the models dialog.
@@ -1840,9 +1866,7 @@ func (m *UI) openModelsDialog() tea.Cmd {
 	}
 
 	modelsDialog.SetSize(min(60, m.width-8), 30)
-	m.dialog.OpenDialog(modelsDialog)
-
-	return nil
+	return m.dialog.OpenDialog(modelsDialog)
 }
 
 // openCommandsDialog opens the commands dialog.
@@ -1865,9 +1889,7 @@ func (m *UI) openCommandsDialog() tea.Cmd {
 
 	// TODO: Get. Rid. Of. Magic numbers!
 	commands.SetSize(min(120, m.width-8), 30)
-	m.dialog.OpenDialog(commands)
-
-	return nil
+	return m.dialog.OpenDialog(commands)
 }
 
 // openSessionsDialog opens the sessions dialog. If the dialog is already open,
@@ -1892,9 +1914,22 @@ func (m *UI) openSessionsDialog() tea.Cmd {
 
 	// TODO: Get. Rid. Of. Magic numbers!
 	dialog.SetSize(min(120, m.width-8), 30)
-	m.dialog.OpenDialog(dialog)
+	return m.dialog.OpenDialog(dialog)
+}
 
-	return nil
+// openFilesDialog opens the file picker dialog.
+func (m *UI) openFilesDialog() tea.Cmd {
+	if m.dialog.ContainsDialog(dialog.FilePickerID) {
+		// Bring to front
+		m.dialog.BringToFront(dialog.FilePickerID)
+		return nil
+	}
+
+	const desiredFilePickerHeight = 10
+	filePicker := dialog.NewFilePicker(m.com)
+	filePicker.SetWindowSize(min(80, m.width-8), desiredFilePickerHeight)
+	filePicker.SetImageCapabilities(&m.imageCaps)
+	return m.dialog.OpenDialog(filePicker)
 }
 
 // newSession clears the current session state and prepares for a new session.

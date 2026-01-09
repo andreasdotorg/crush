@@ -108,6 +108,11 @@ func (s *Session) ID() string {
 	return SessionsID
 }
 
+// Init implements Dialog.
+func (s *Session) Init() tea.Cmd {
+	return nil
+}
+
 // Update implements Dialog.
 func (s *Session) Update(msg tea.Msg) tea.Msg {
 	switch msg := msg.(type) {
