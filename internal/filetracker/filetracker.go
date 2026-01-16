@@ -9,6 +9,8 @@ package filetracker
 import (
 	"sync"
 	"time"
+
+	"github.com/charmbracelet/crush/internal/gitinfo"
 )
 
 // record tracks when a file was read/written.
@@ -49,7 +51,7 @@ func LastReadTime(path string) time.Time {
 	return rec.readTime
 }
 
-// RecordWrite records when a file was written.
+// RecordWrite records when a file was written and invalidates git status cache.
 func RecordWrite(path string) {
 	recordMutex.Lock()
 	defer recordMutex.Unlock()
@@ -60,6 +62,8 @@ func RecordWrite(path string) {
 	}
 	rec.writeTime = time.Now()
 	records[path] = rec
+
+	gitinfo.Invalidate()
 }
 
 // Reset clears all file tracking records. Useful for testing.
