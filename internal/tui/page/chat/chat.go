@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"charm.land/bubbles/v2/help"
@@ -792,10 +793,25 @@ func (p *chatPage) SetSize(width, height int) tea.Cmd {
 	p.height = height
 	var cmds []tea.Cmd
 
+	// Debug logging for visual bug investigation.
+	slog.Debug("chatPage.SetSize",
+		"width", width,
+		"height", height,
+		"session_id", p.session.ID,
+		"compact", p.compact,
+		"splash_fullscreen", p.splashFullScreen,
+	)
+
 	if p.session.ID == "" {
 		if p.splashFullScreen {
 			cmds = append(cmds, p.splash.SetSize(width, height))
 		} else {
+			editorHeight := EditorHeight
+			slog.Debug("chatPage.SetSize: no session, editor sizing",
+				"editor_width", width,
+				"editor_height", editorHeight,
+				"editor_y", height-editorHeight,
+			)
 			cmds = append(cmds, p.splash.SetSize(width, height-EditorHeight))
 			cmds = append(cmds, p.editor.SetSize(width, EditorHeight))
 			cmds = append(cmds, p.editor.SetPosition(0, height-EditorHeight))
@@ -816,6 +832,13 @@ func (p *chatPage) SetSize(width, height int) tea.Cmd {
 				}
 			}
 		}
+
+		slog.Debug("chatPage.SetSize: with session, editor sizing",
+			"editor_width", width,
+			"editor_height", EditorHeight,
+			"editor_y", height-EditorHeight,
+			"pills_area_height", pillsAreaHeight,
+		)
 
 		if p.compact {
 			cmds = append(cmds, p.chat.SetSize(width, height-EditorHeight-HeaderHeight-pillsAreaHeight))

@@ -3,6 +3,7 @@ package editor
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"os"
@@ -540,16 +541,28 @@ func (m *editorCmp) View() string {
 	if m.app.Permissions.SkipRequests() {
 		m.textarea.Placeholder = "Yolo mode!"
 	}
-	if len(m.attachments) == 0 {
-		return t.S().Base.Padding(1).Render(
-			m.textarea.View(),
+
+	taView := m.textarea.View()
+
+	// Debug logging for visual bug investigation.
+	if len(taView) == 0 {
+		slog.Warn("editor.View: textarea.View() returned empty string",
+			"width", m.width,
+			"height", m.height,
+			"textarea_width", m.textarea.Width(),
+			"textarea_height", m.textarea.Height(),
+			"focused", m.textarea.Focused(),
 		)
+	}
+
+	if len(m.attachments) == 0 {
+		return t.S().Base.Padding(1).Render(taView)
 	}
 	return t.S().Base.Padding(0, 1, 1, 1).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Top,
 			m.attachmentsContent(),
-			m.textarea.View(),
+			taView,
 		),
 	)
 }
@@ -557,8 +570,29 @@ func (m *editorCmp) View() string {
 func (m *editorCmp) SetSize(width, height int) tea.Cmd {
 	m.width = width
 	m.height = height
-	m.textarea.SetWidth(width - 2)   // adjust for padding
-	m.textarea.SetHeight(height - 2) // adjust for padding
+	taWidth := width - 2   // adjust for padding
+	taHeight := height - 2 // adjust for padding
+	m.textarea.SetWidth(taWidth)
+	m.textarea.SetHeight(taHeight)
+
+	// Debug logging for visual bug investigation.
+	slog.Debug("editor.SetSize",
+		"width", width,
+		"height", height,
+		"textarea_width", taWidth,
+		"textarea_height", taHeight,
+		"actual_ta_width", m.textarea.Width(),
+		"actual_ta_height", m.textarea.Height(),
+	)
+
+	// Warn if dimensions are suspiciously small.
+	if taWidth <= 0 || taHeight <= 0 {
+		slog.Warn("editor.SetSize: invalid dimensions",
+			"textarea_width", taWidth,
+			"textarea_height", taHeight,
+		)
+	}
+
 	return nil
 }
 
@@ -613,6 +647,7 @@ func (m *editorCmp) attachmentsContent() string {
 func (m *editorCmp) SetPosition(x, y int) tea.Cmd {
 	m.x = x
 	m.y = y
+	slog.Debug("editor.SetPosition", "x", x, "y", y)
 	return nil
 }
 

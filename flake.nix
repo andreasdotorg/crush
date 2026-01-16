@@ -53,17 +53,23 @@
             mainProgram = "crush";
           };
         };
+
+        # Wrapper that enables debug logging by default
+        crushDebug = pkgs.writeShellScriptBin "crush" ''
+          exec ${crush}/bin/crush --debug "$@"
+        '';
       in
       {
         # `nix build`
         packages = {
-          default = crush;
+          default = crushDebug;
           crush = crush;
+          crushDebug = crushDebug;
         };
 
         # `nix run`
         apps.default = flake-utils.lib.mkApp {
-          drv = crush;
+          drv = crushDebug;
         };
 
         # `nix develop`
