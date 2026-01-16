@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -91,14 +92,13 @@ func GlobWithDoubleStar(ctx context.Context, pattern, searchPath string, limit i
 	}
 
 	const maxScannedFiles = 10000
-	var scannedFiles int
+	var scannedFiles atomic.Int64
 	err := fastwalk.Walk(&conf, searchPath, func(path string, d os.DirEntry, err error) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
-		scannedFiles++
-		if scannedFiles > maxScannedFiles {
+		if scannedFiles.Add(1) > maxScannedFiles {
 			return fmt.Errorf("search space too large (over %d files scanned). Use a more specific path", maxScannedFiles)
 		}
 

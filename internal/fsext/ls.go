@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/charlievieth/fastwalk"
 	"github.com/charmbracelet/crush/internal/csync"
@@ -222,14 +223,13 @@ func ListDirectory(ctx context.Context, initialPath string, ignorePatterns []str
 	}
 
 	const maxScannedFiles = 10000
-	var scannedFiles int
+	var scannedFiles atomic.Int64
 	err := fastwalk.Walk(&conf, initialPath, func(path string, d os.DirEntry, err error) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
-		scannedFiles++
-		if scannedFiles > maxScannedFiles {
+		if scannedFiles.Add(1) > maxScannedFiles {
 			return fmt.Errorf("search space too large (over %d files scanned). Use a more specific path", maxScannedFiles)
 		}
 
