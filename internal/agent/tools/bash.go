@@ -15,6 +15,7 @@ import (
 
 	"charm.land/fantasy"
 	"github.com/charmbracelet/crush/internal/config"
+	"github.com/charmbracelet/crush/internal/gitinfo"
 	"github.com/charmbracelet/crush/internal/permission"
 	"github.com/charmbracelet/crush/internal/shell"
 )
@@ -371,8 +372,11 @@ func NewBashTool(permissions permission.Service, workingDir string, attribution 
 		})
 }
 
-// formatOutput formats the output of a completed command with error handling
+// formatOutput formats the output of a completed command with error handling.
+// It also invalidates the git status cache since bash commands may modify files.
 func formatOutput(stdout, stderr string, execErr error) string {
+	gitinfo.Invalidate()
+
 	interrupted := shell.IsInterrupt(execErr)
 	exitCode := shell.ExitCode(execErr)
 
