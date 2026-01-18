@@ -139,6 +139,9 @@ var BannedCommands = []string{
 	"pfctl",
 	"route",
 	"ufw",
+
+	// Kubernetes
+	"kubectl",
 }
 
 func bashDescription(attribution *config.Attribution, modelName string) string {
