@@ -119,6 +119,7 @@ func (m *sidebarCmp) View() string {
 	style := t.S().Base.
 		Width(m.width).
 		Height(m.height).
+		MaxHeight(m.height).
 		Padding(1)
 	if m.compactMode {
 		style = style.PaddingTop(0)
