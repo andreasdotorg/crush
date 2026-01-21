@@ -142,6 +142,7 @@ var BannedCommands = []string{
 
 	// Kubernetes
 	"kubectl",
+	"minikube delete",
 }
 
 func bashDescription(attribution *config.Attribution, modelName string) string {
