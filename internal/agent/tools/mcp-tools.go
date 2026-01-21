@@ -3,11 +3,36 @@ package tools
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"charm.land/fantasy"
 	"github.com/charmbracelet/crush/internal/agent/tools/mcp"
 	"github.com/charmbracelet/crush/internal/permission"
 )
+
+// validToolNameRe matches characters valid in Gemini tool names.
+var validToolNameRe = regexp.MustCompile(`[^a-zA-Z0-9_.\-:]`)
+
+// sanitizeToolName ensures a tool name is valid for all providers.
+// Gemini requires: start with letter/underscore, only a-z, A-Z, 0-9, _, ., :, -.
+func sanitizeToolName(name string) string {
+	// Replace invalid characters with underscores.
+	name = validToolNameRe.ReplaceAllString(name, "_")
+	// Collapse multiple underscores.
+	for strings.Contains(name, "__") {
+		name = strings.ReplaceAll(name, "__", "_")
+	}
+	// Ensure it starts with a letter or underscore.
+	if len(name) > 0 && !((name[0] >= 'a' && name[0] <= 'z') || (name[0] >= 'A' && name[0] <= 'Z') || name[0] == '_') {
+		name = "_" + name
+	}
+	// Truncate to 64 characters max.
+	if len(name) > 64 {
+		name = name[:64]
+	}
+	return name
+}
 
 // GetMCPTools gets all the currently available MCP tools.
 func GetMCPTools(permissions permission.Service, wd string) []*Tool {
@@ -43,7 +68,7 @@ func (m *Tool) ProviderOptions() fantasy.ProviderOptions {
 }
 
 func (m *Tool) Name() string {
-	return fmt.Sprintf("mcp_%s_%s", m.mcpName, m.tool.Name)
+	return sanitizeToolName(fmt.Sprintf("mcp_%s_%s", m.mcpName, m.tool.Name))
 }
 
 func (m *Tool) MCP() string {
